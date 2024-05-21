@@ -36,6 +36,25 @@
         th {
             background-color: #f2f2f2;
         }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
@@ -53,34 +72,19 @@
             <li>If you pocket the 9-ball early (even on the break), you must still attempt to run the remaining balls.</li>
             <li>The rack is over when you miss or scratch on a shot after the break. Balls made on a scratch don’t count.</li>
         </ul>
-        <table>
-            <thead>
-                <tr>
-                    <th>Total Score</th>
-                    <th>Rating</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>0-8 (for 5 racks)</td>
-                    <td>D (novice)</td>
-                </tr>
-                <tr>
-                    <td>9-14 (for 5 racks)</td>
-                    <td>C (intermediate)</td>
-                </tr>
-                <tr>
-                    <td>15-19 (for 5 racks)</td>
-                    <td>B (advanced)</td>
-                </tr>
-                <tr>
-                    <td>20-23 (for 5 racks)</td>
-                    <td>A (superior)</td>
-                </tr>
-            </tbody>
-        </table>
+        <form id="progressForm">
+            <label for="date">Date:</label>
+            <input type="date" id="date" name="date" required><br>
+            <label for="rackScores">Rack Scores (Balls Made +1 if 9-ball made):</label>
+            <input type="text" id="rackScores" name="rackScores" placeholder="Enter rack scores" required><br>
+            <label for="totalScore">Total Score:</label>
+            <input type="number" id="totalScore" name="totalScore" placeholder="Enter total score" required><br>
+            <label for="rating">Rating:</label>
+            <input type="text" id="rating" name="rating" placeholder="Enter rating" required><br>
+            <input type="submit" value="Submit">
+        </form>
         <h2>Rating History</h2>
-        <table>
+        <table id="ratingHistory">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -94,6 +98,32 @@
             </tbody>
         </table>
     </div>
+
+    <script>
+        document.getElementById("progressForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            const date = document.getElementById("date").value;
+            const rackScores = document.getElementById("rackScores").value;
+            const totalScore = document.getElementById("totalScore").value;
+            const rating = document.getElementById("rating").value;
+
+            const table = document.getElementById("ratingHistory").getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow(table.rows.length);
+            const cell1 = newRow.insertCell(0);
+            const cell2 = newRow.insertCell(1);
+            const cell3 = newRow.insertCell(2);
+            const cell4 = newRow.insertCell(3);
+            cell1.innerHTML = date;
+            cell2.innerHTML = rackScores;
+            cell3.innerHTML = totalScore;
+            cell4.innerHTML = rating;
+
+            // Clear input fields after submission
+            document.getElementById("date").value = "";
+            document.getElementById("rackScores").value = "";
+            document.getElementById("totalScore").value = "";
+            document.getElementById("rating").value = "";
+        });
+    </script>
 </body>
 </html>
-
