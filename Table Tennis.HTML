@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Tennis App</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        .modal {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        #app {
+            text-align: center;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .player {
+            text-align: center;
+        }
+
+        .playerName {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .playerScore {
+            font-size: 48px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="setupScreen" class="screen active">
+            <h1>WELCOME TO MAIN COURT</h1>
+            <h2>SCORE-A-TRON</h2>
+            <label for="raceToGames">Select Number of Games</label>
+            <select id="raceToGames">
+                <option value="3">3 Games</option>
+                <option value="5">5 Games</option>
+                <option value="7">7 Games</option>
+            </select>
+            <input type="text" id="player1Name" placeholder="Enter Player 1 Name">
+            <input type="text" id="player2Name" placeholder="Enter Player 2 Name">
+            <button id="startMatch">Start Match</button>
+        </div>
+        
+        <div id="gameScreen" class="screen hidden">
+            <h1>Let's Table Tennis!</h1>
+            <div id="matchClock">Match Clock: 00:00</div>
+            <div id="gameClock">Game Clock: 00:00</div>
+            <div id="currentServer">Current Server:</div>
+            <div id="currentMatchScore">Current Match Score: 0 - 0</div>
+            <div class="scoreboard">
+                <div id="player1" class="player">
+                    <div class="playerName"></div>
+                    <div class="playerScore">0</div>
+                    <button class="incrementScore">+1 Point</button>
+                </div>
+                <div id="player2" class="player">
+                    <div class="playerName"></div>
+                    <div class="playerScore">0</div>
+                    <button class="incrementScore">+1 Point</button>
+                </div>
+            </div>
+            <button id="undoButton">Undo</button>
+            <button id="endGame">End Game</button>
+        </div>
+
+        <div id="gameEndModal" class="modal hidden">
+            <div class="modal-content">
+                <span id="gameEndMessage"></span>
+                <button id="nextGameButton">Next Game</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const setupScreen = document.getElementById('setupScreen');
+            const gameScreen = document.getElementById('gameScreen');
+            const gameEndModal = document.getElementById('gameEndModal');
+            const nextGameButton = document.getElementById('nextGameButton');
+            
+            const startMatchButton = document.getElementById('startMatch');
+            const endGameButton = document.getElementById('endGame');
+            const undoButton = document.getElementById('undoButton');
+            const player1NameInput = document.getElementById('player1Name');
+            const player2NameInput = document.getElementById('player2Name');
+            
+            let player1Name = '';
+            let player2Name = '';
+            let currentServer = '';
+            let player1Score = 0;
+            let player2Score = 0;
+            let player1Games = 0;
+            let player2Games = 0;
+            let raceToGames = 3;
+            let matchClock = 0;
+            let gameClock = 0;
+            let matchTimer;
+            let gameTimer;
+            let scoreHistory = [];
+            let serveCounter = 0;
+            
+            startMatchButton.addEventListener('click', () => {
+                player1Name = player1NameInput.value;
+                player2Name = player2NameInput.value;
+                currentServer = player1Name;
+                raceToGames = parseInt(document.getElementById('raceToGames').value);
+                document.querySelector('#player1 .playerName').textContent = player1Name;
+                document.querySelector('#player2 .playerName').textContent = player2Name;
+                document.getElementById('currentServer').textContent = `Current Server: ${currentServer}`;
+                setupScreen.classList.remove('active');
+                gameScreen.classList.add('active');
+                startMatch();
+            });
+            
+            endGameButton.addEventListener('click', () => {
+                alert('Game Ended');
+                resetMatch();
+            });
+            
+            undoButton.addEventListener('click', () => {
+                undoLastAction();
+            });
+
+            nextGameButton.addEventListener('click', () => {
+                gameEndModal.classList.remove('active');
+                resetGame();
+            });
+            
+            document.querySelectorAll('.incrementScore').forEach((button, index) => {
+                button.addEventListener('click', () => {
+                    if (index === 0) {
+                        incrementScore('player1');
+                    } else {
+                        incrementScore('player2');
+                    }
+                    checkForGameWin();
+                });
+            });
+
+            function startMatch() {
+                matchClock = 0;
+                gameClock = 0;
+                matchTimer = setInterval(() => {
+                    matchClock++;
+                    document.getElementById('matchClock').textContent = `Match Clock: ${formatTime(matchClock)}`;
+                }, 1000);
+                startGame();
+            }
+            
+            function startGame() {
+                gameClock = 0;
+                player1Score = 0;
+                player2Score = 0;
+                serveCounter = 0;
+                gameTimer = setInterval(() => {
+                    gameClock++;
+                    document.getElementById('gameClock').textContent = `Game Clock: ${formatTime(gameClock)}`;
+                }, 1000);
+            }
+            
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+            }
+            
+            function incrementScore(player) {
+                if (player === 'player1') {
+                    player1Score++;
+                } else {
+                    player2Score++;
+                }
+                serveCounter++;
+                document.querySelector(`#${player} .playerScore`).textContent = player === 'player1' ? player1Score : player2Score;
+                scoreHistory.push({ player1Score, player2Score, currentServer, serveCounter });
+                if (serveCounter % 2 === 0) {
+                    switchServer();
+                }
+            }
+            
+            function switchServer() {
+                currentServer = currentServer === player1Name ? player2Name : player1Name;
+                document.getElementById('currentServer').textContent = `Current Server: ${currentServer}`;
+            }
+            
+            function checkForGameWin() {
+                if ((player1Score >= 11 || player2Score >= 11) && Math.abs(player1Score - player2Score) >= 2) {
+                    clearInterval(gameTimer);
+                    if (player1Score > player2Score) {
+                        player1Games++;
+                    } else {
+                        player2Games++;
+                    }
+                    document.getElementById('currentMatchScore').textContent = `Current Match Score: ${player1Games} - ${player2Games}`;
+                    if (player1Games === raceToGames || player2Games === raceToGames) {
+                        clearInterval(matchTimer);
+                        alert(`${player1Games === raceToGames ? player1Name : player2Name} wins the match!`);
+                        resetMatch();
+                    } else {
+                        endGame();
+                    }
+                }
+            }
+
+            function endGame() {
+                document.getElementById('gameEndMessage').textContent = `${player1Score > player2Score ? player1Name : player2Name} wins the game!`;
+                gameEndModal.classList.add('active');
+                resetScores();
+            }
+            
+            function resetGame() {
+                clearInterval(gameTimer);
+                player1Score = 0;
+                player2Score = 0;
+                document.querySelector('#player1 .playerScore').textContent = player1Score;
+                document.querySelector('#player2 .playerScore').textContent = player2Score;
+                startGame();
+            }
+            
+            function resetMatch() {
+                clearInterval(matchTimer);
+                player1Games = 0;
+                player2Games = 0;
+                player1Score = 0;
+                player2Score = 0;
+                serveCounter = 0;
+                matchClock = 0;
+                gameClock = 0;
+                scoreHistory = [];
+                setupScreen.classList.add('active');
+                gameScreen.classList.remove('active');
+                gameEndModal.classList.remove('active');
+                player1NameInput.value = '';
+                player2NameInput.value = '';
+            }
+
+            function resetScores() {
+                player1Score = 0;
+                player2Score = 0;
+                document.querySelector('#player1 .playerScore').textContent = player1Score;
+                document.querySelector('#player2 .playerScore').textContent = player2Score;
+            }
+
+            function undoLastAction() {
+                if (scoreHistory.length > 0) {
+                    const lastState = scoreHistory.pop();
+                    player1Score = lastState.player1Score;
+                    player2Score = lastState.player2Score;
+                    currentServer = lastState.currentServer;
+                    serveCounter = lastState.serveCounter;
+                    document.querySelector('#player1 .playerScore').textContent = player1Score;
+                    document.querySelector('#player2 .playerScore').textContent = player2Score;
+                    document.getElementById('currentServer').textContent = `Current Server: ${currentServer}`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
